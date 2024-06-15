@@ -5,20 +5,24 @@ import matplotlib.pyplot as plt
 import yfinance as yf
 
 
-def get_ticket_data(ticker):
+def get_ticket_data(ticker, list_average):
+
     ticker_completo = ticker + '.SA'
     start = datetime.now() - timedelta(days=365 * 3)
-    data = yf.download(ticker_completo, start=start, progress=False, interval="1wk")
-    data['12 meses'] = data['Close'].rolling(window=12).mean()
-    data['3 meses'] = data['Close'].rolling(window=4).mean()
+    data = yf.download(ticker_completo, start=start, progress=False)
+
+    for average in list_average:
+        data[f'{average} dias'] = data['Close'].rolling(window=average).mean()
+
     return data
 
 
-def generate_graph(show_or_save, data, ticket):
+def generate_graph(show_or_save, data, ticket, list_average):
     plt.figure(figsize=(19.20, 10.80))
     plt.plot(data['Close'], label=f'{ticket}')
-    plt.plot(data['12 meses'], label='12 meses', linestyle='--')
-    plt.plot(data['3 meses'], label='3 meses', linestyle='--')
+
+    for average in list_average:
+        plt.plot(data[f'{average} dias'], label=f'{average} dias', linestyle='--')
     plt.title(f'Preço de Fechamento do Ativo {ticket} com Médias Móveis nos Últimos 3 Anos')
     plt.xlabel('Data')
     plt.ylabel('Preço de Fechamento')
@@ -91,6 +95,8 @@ def main():
             print("\n\033[91mOpção inválida.\033[0m")
 
     while True:
+        list_average = []
+        just_uptrend = ''
         averages = input("\nVocê deseja inserir médias? "
                          "\n\t1 - Sim"
                          "\n\t2 - Não"
@@ -99,7 +105,6 @@ def main():
         if averages in ['1', '2']:
             if averages == '1':
                 count = 1
-                list_average = []
                 while True:
                     average = input(f"\nInforme a {count}° média em dias: "
                                     "\n\tPressione \033[93mEnter\033[0m para prosseguir"
@@ -135,22 +140,21 @@ def main():
             print("\n\033[91mOpção inválida.\033[0m")
 
     for ticket in tickets:
-        data = get_ticket_data(ticket)
+        data = get_ticket_data(ticket, list_average)
 
         if data.empty:
             print(f"Sem informações para {ticket}")
         else:
-            try:
-                if just_uptrend == '1':
-                    if (data['3 meses'].iloc[-1] > data['12 meses'].iloc[-1]) and (
-                            data['Close'].iloc[-1] > data['Close'].iloc[-3]):
-                        print(f"\033[92mMontando gráfico do ticket {ticket}, em tendência de alta.\033[0m")
-                        generate_graph(show_or_save, data, ticket)
-                    else:
-                        print(f"\033[91mIgnorando o ticket {ticket}, em tendência de baixa.\033[0m")
-            except UnboundLocalError:
+            if just_uptrend == '1':
+                if (data['3 meses'].iloc[-1] > data['12 meses'].iloc[-1]) and (
+                        data['Close'].iloc[-1] > data['Close'].iloc[-3]):
+                    print(f"\033[92mMontando gráfico do ticket {ticket}, em tendência de alta.\033[0m")
+                    generate_graph(show_or_save, data, ticket, list_average)
+                else:
+                    print(f"\033[91mIgnorando o ticket {ticket}, em tendência de baixa.\033[0m")
+            else:
                 print(f"\033[92mMontando gráfico do ticket {ticket}\033[0m")
-                generate_graph(show_or_save, data, ticket)
+                generate_graph(show_or_save, data, ticket, list_average)
 
 
 if __name__ == "__main__":
