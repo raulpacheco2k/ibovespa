@@ -34,11 +34,11 @@ def generate_graph(show_or_save, data, ticket):
         plt.savefig(file_path, dpi=100)
 
 
-def get_tickets_by_file(caminho_arquivo):
+def get_tickets_by_file(file_path):
     tickets = []
-    with open(caminho_arquivo, 'r') as arquivo:
-        for linha in arquivo:
-            ticker = linha.strip().upper()
+    with open(file_path, 'r') as file:
+        for line in file:
+            ticker = line.strip().upper()
             if ticker:
                 tickets.append(ticker)
     return tickets
@@ -56,9 +56,9 @@ def main():
         if show_or_save in ['1', '2']:
             break
         else:
-            print("\n\033[91mOpção inválida. Por favor, escolha '1' ou '2'.\033[0m\n")
+            print("\n\033[91mOpção inválida.\033[0m\n")
 
-    # Seleção de tipo seleção de tickcet e caso necessário caminho do arquivo.
+    # Seleção de tipo seleção de ticket e caso necessário caminho do arquivo.
     while True:
         insertion_type = input("\nComo você prefere inserir as ações para analisar?"
                                "\n\t 1 - Manual, vou digitar os tickets"
@@ -69,7 +69,7 @@ def main():
                 while True:
                     ticker = input("\nDigite o ticket da ação."
                                    "\n\tExemplo: ABEV3, B3SA3, ITUB4, PETR4, VALE3, WEGE3..."
-                                   "\n\tDigite \033[93m/continue\033[0m para sair"
+                                   "\n\tPressione \033[93mEnter\033[0m para prosseguir"
                                    "\nTicket: ").upper()
                     if ticker == '/CONTINUE':
                         break
@@ -77,7 +77,7 @@ def main():
             elif insertion_type == '2':
                 while True:
                     file_path = input("\nQual é o caminho até o arquivo?"
-                                      "\n\tPresscione enter se o caminho for ./acoes.csv"
+                                      "\n\tPressione enter se o caminho for \033[93m./acoes.csv\033[0m"
                                       "\nCaminho: ")
                     file_path = file_path if file_path else './acoes.csv'
 
@@ -88,18 +88,51 @@ def main():
                         print("\n\033[91mArquivo não encontrado.\033[0m")
             break
         else:
-            print("\n\033[91mOpção inválida. Por favor, escolha '1' ou '2'.\033[0m")
+            print("\n\033[91mOpção inválida.\033[0m")
 
-    # Seleciona se deseja apenas tickets em tendência de alta
     while True:
-        just_uptrend = input("\nExibir apenas ações com tendência de alta? Média 12 meses maior que média de 3 meses."
-                             "\n\t1 - Sim"
-                             "\n\t2 - Não"
-                             "\nOpção: ")
-        if just_uptrend in ['1', '2']:
-            break
+        averages = input("\nVocê deseja inserir médias? "
+                         "\n\t1 - Sim"
+                         "\n\t2 - Não"
+                         "\nOpção: ")
+
+        if averages in ['1', '2']:
+            if averages == '1':
+                count = 1
+                list_average = []
+                while True:
+                    average = input(f"\nInforme a {count}° média em dias: "
+                                    "\n\tPressione \033[93mEnter\033[0m para prosseguir"
+                                    "\nMédia: ")
+
+                    if len(list_average) == 0 and average == '':
+                        print("\n\033[91m\nVocê deve informar ao menos uma média.\033[0m")
+                    elif len(list_average) > 0 and average == '':
+                        break
+                    else:
+                        try:
+                            list_average.append(int(average))
+                            count += 1
+                        except ValueError:
+                            print("\n\033[91m\nVocê deve informar um número inteiro.\033[0m")
+
+                # Seleciona se deseja apenas tickets em tendência de alta
+                while True:
+                    just_uptrend = input(
+                        f"\nExibir apenas ações com tendência de alta? Média {min(list_average)} dias maior que a "
+                        f"média de {max(list_average)} dias."
+                        "\n\t1 - Sim"
+                        "\n\t2 - Não"
+                        "\nOpção: ")
+                    if just_uptrend in ['1', '2']:
+                        break
+                    else:
+                        print("\n\033[91mOpção inválida.\033[0m")
+                break
+            else:
+                break
         else:
-            print("\n\033[91mOpção inválida. Por favor, escolha '1' ou '2'.\033[0m")
+            print("\n\033[91mOpção inválida.\033[0m")
 
     for ticket in tickets:
         data = get_ticket_data(ticket)
@@ -107,14 +140,15 @@ def main():
         if data.empty:
             print(f"Sem informações para {ticket}")
         else:
-            if just_uptrend == '1':
-                if (data['3 meses'].iloc[-1] > data['12 meses'].iloc[-1]) and (
-                        data['Close'].iloc[-1] > data['Close'].iloc[-3]):
-                    print(f"\033[92mMontando gráfico do ticket {ticket}, em tendência de alta.\033[0m")
-                    generate_graph(show_or_save, data, ticket)
-                else:
-                    print(f"\033[91mIgnorando o ticket {ticket}, em tendência de baixa.\033[0m")
-            else:
+            try:
+                if just_uptrend == '1':
+                    if (data['3 meses'].iloc[-1] > data['12 meses'].iloc[-1]) and (
+                            data['Close'].iloc[-1] > data['Close'].iloc[-3]):
+                        print(f"\033[92mMontando gráfico do ticket {ticket}, em tendência de alta.\033[0m")
+                        generate_graph(show_or_save, data, ticket)
+                    else:
+                        print(f"\033[91mIgnorando o ticket {ticket}, em tendência de baixa.\033[0m")
+            except UnboundLocalError:
                 print(f"\033[92mMontando gráfico do ticket {ticket}\033[0m")
                 generate_graph(show_or_save, data, ticket)
 
